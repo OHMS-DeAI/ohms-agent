@@ -1,9 +1,21 @@
 {
   "canisters": {
-    "ohms-agent-backend": {
-      "candid": "src/ohms-agent-backend/ohms-agent-backend.did",
-      "package": "ohms-agent-backend",
-      "type": "rust"
+    "ohms_agent": {
+      "type": "rust",
+      "candid": "src/ohms_agent.did",
+      "package": "ohms_agent"
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
+    },
+    "ic": {
+      "providers": [
+        "https://ic0.app"
+      ],
+      "type": "persistent"
     }
   },
   "defaults": {

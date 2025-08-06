@@ -1,0 +1,53 @@
+type AgentConfig = record {
+  warm_set_target : float32;
+  prefetch_depth : nat32;
+  max_tokens : nat32;
+  concurrency_limit : nat32;
+  ttl_seconds : nat64;
+};
+
+type DecodeParams = record {
+  max_tokens : opt nat32;
+  temperature : opt float32;
+  top_p : opt float32;
+  top_k : opt nat32;
+  repetition_penalty : opt float32;
+};
+
+type InferenceRequest = record {
+  seed : nat64;
+  prompt : text;
+  decode_params : DecodeParams;
+  msg_id : text;
+};
+
+type InferenceResponse = record {
+  tokens : vec text;
+  generated_text : text;
+  inference_time_ms : nat64;
+  cache_hits : nat32;
+  cache_misses : nat32;
+};
+
+type AgentHealth = record {
+  model_bound : bool;
+  cache_hit_rate : float32;
+  warm_set_utilization : float32;
+  queue_depth : nat32;
+  last_inference_timestamp : nat64;
+};
+
+type Result = variant { Ok; Err : text };
+type Result_1 = variant { Ok : AgentConfig; Err : text };
+type Result_2 = variant { Ok : InferenceResponse; Err : text };
+type Result_3 = variant { Ok : text; Err : text };
+
+service : {
+  bind_model : (text) -> (Result);
+  clear_memory : () -> (Result);
+  get_config : () -> (Result_1) query;
+  get_memory_stats : () -> (Result_3) query;
+  health : () -> (AgentHealth) query;
+  infer : (InferenceRequest) -> (Result_2);
+  set_config : (AgentConfig) -> (Result);
+}
