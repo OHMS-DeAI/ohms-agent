@@ -1,0 +1,17 @@
+{
+  "canisters": {
+    "ohms-agent-backend": {
+      "candid": "src/ohms-agent-backend/ohms-agent-backend.did",
+      "package": "ohms-agent-backend",
+      "type": "rust"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
