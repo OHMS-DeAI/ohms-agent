@@ -1,5 +1,4 @@
 use crate::domain::*;
-use ic_cdk::api::time;
 use std::collections::HashMap;
 use std::cell::RefCell;
 
@@ -7,11 +6,14 @@ pub mod binding;
 pub mod inference;
 pub mod memory;
 pub mod cache;
+pub mod modelrepo;
 
 pub use binding::BindingService;
 pub use inference::InferenceService; 
 pub use memory::MemoryService;
 pub use cache::CacheService;
+pub use modelrepo::ModelRepoClient;
+use modelrepo::ModelManifest;
 
 thread_local! {
     static STATE: RefCell<AgentState> = RefCell::new(AgentState::default());
@@ -21,6 +23,7 @@ thread_local! {
 pub struct AgentState {
     pub config: AgentConfig,
     pub binding: Option<ModelBinding>,
+    pub manifest: Option<ModelManifest>,
     pub memory_entries: HashMap<String, MemoryEntry>,
     pub cache_entries: HashMap<String, CacheEntry>,
     pub metrics: AgentMetrics,

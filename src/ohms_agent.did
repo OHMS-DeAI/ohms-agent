@@ -4,6 +4,7 @@ type AgentConfig = record {
   max_tokens : nat32;
   concurrency_limit : nat32;
   ttl_seconds : nat64;
+  model_repo_canister_id : text;
 };
 
 type DecodeParams = record {
@@ -41,13 +42,17 @@ type Result = variant { Ok; Err : text };
 type Result_1 = variant { Ok : AgentConfig; Err : text };
 type Result_2 = variant { Ok : InferenceResponse; Err : text };
 type Result_3 = variant { Ok : text; Err : text };
+type Result_4 = variant { Ok : nat32; Err : text };
 
 service : {
   bind_model : (text) -> (Result);
+  prefetch_next : (nat32) -> (Result_4);
   clear_memory : () -> (Result);
   get_config : () -> (Result_1) query;
   get_memory_stats : () -> (Result_3) query;
+  get_loader_stats : () -> (Result_3) query;
   health : () -> (AgentHealth) query;
   infer : (InferenceRequest) -> (Result_2);
   set_config : (AgentConfig) -> (Result);
+  repo_canister : () -> (Result_3) query;
 }

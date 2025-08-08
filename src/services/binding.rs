@@ -1,5 +1,5 @@
 use crate::domain::*;
-use crate::services::{with_state, with_state_mut};
+use crate::services::{with_state, with_state_mut, ModelRepoClient, CacheService};
 use ic_cdk::api::time;
 use sha2::{Sha256, Digest};
 use base64::{Engine as _, engine::general_purpose};
@@ -8,24 +8,65 @@ pub struct BindingService;
 
 impl BindingService {
     pub async fn bind_model(model_id: String) -> Result<(), String> {
-        // TODO: In real implementation, fetch manifest from ohms-model canister
-        // For now, create a mock binding for the bootstrap milestone
-        let manifest_digest = Self::compute_manifest_digest(&model_id)?;
-        
+        // Real binding: fetch manifest and prefetch chunks from ohms-model canister
+        let repo_canister = with_state(|s| s.config.model_repo_canister_id.clone());
+        if repo_canister.is_empty() { return Err("model_repo_canister_id not configured".to_string()); }
+
+        let manifest = ModelRepoClient::get_manifest(&repo_canister, &model_id).await?;
+        // Ensure Active state (avoid binding Pending/Deprecated)
+        match manifest.state {
+            crate::services::modelrepo::ModelState::Active => {},
+            _ => return Err("model is not Active".to_string()),
+        }
+
+        // Prefetch first N chunks
+        let prefetch_n = with_state(|s| s.config.prefetch_depth);
+        let mut loaded: u32 = 0;
+        for chunk in manifest.chunks.iter().take(prefetch_n as usize) {
+            let bytes = ModelRepoClient::get_chunk(&repo_canister, &model_id, &chunk.id).await?;
+            CacheService::put(chunk.id.clone(), bytes)?;
+            loaded += 1;
+        }
+
         let binding = ModelBinding {
             model_id: model_id.clone(),
             bound_at: time(),
-            manifest_digest,
-            chunks_loaded: 0,
-            total_chunks: 8, // Mock value
+            manifest_digest: manifest.digest.clone(),
+            chunks_loaded: loaded,
+            total_chunks: manifest.chunks.len() as u32,
+            version: manifest.version.clone(),
         };
-        
+
         with_state_mut(|state| {
+            state.manifest = Some(manifest);
             state.binding = Some(binding);
             state.metrics.last_activity = time();
         });
-        
         Ok(())
+    }
+    
+    pub async fn prefetch_next(n: u32) -> Result<u32, String> {
+        let (repo_canister, model_id, already_loaded, manifest_opt) = with_state(|s| {
+            (s.config.model_repo_canister_id.clone(),
+             s.binding.as_ref().map(|b| b.model_id.clone()),
+             s.binding.as_ref().map(|b| b.chunks_loaded).unwrap_or(0),
+             s.manifest.clone())
+        });
+        if repo_canister.is_empty() { return Err("model_repo_canister_id not configured".into()); }
+        let model_id = model_id.ok_or_else(|| "no model bound".to_string())?;
+        let manifest = manifest_opt.ok_or_else(|| "manifest not loaded".to_string())?;
+        let mut loaded = 0u32;
+        for chunk in manifest.chunks.iter().skip(already_loaded as usize).take(n as usize) {
+            let bytes = ModelRepoClient::get_chunk(&repo_canister, &model_id, &chunk.id).await?;
+            CacheService::put(chunk.id.clone(), bytes)?;
+            loaded += 1;
+        }
+        with_state_mut(|s| {
+            if let Some(b) = &mut s.binding {
+                b.chunks_loaded += loaded;
+            }
+        });
+        Ok(loaded)
     }
     
     pub fn set_config(config: AgentConfig) -> Result<(), String> {

@@ -20,3 +20,7 @@ base64 = "0.21"
 thiserror = "1.0"
 log = "0.4"
 getrandom = { version = "0.2", features = ["custom"] }
+hex = "0.4"
+ic-stable-structures = "0.6"
+
+# OHMS dependencies (none required in agent for runtime)

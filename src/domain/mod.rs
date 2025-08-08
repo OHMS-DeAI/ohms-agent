@@ -9,6 +9,7 @@ pub struct AgentConfig {
     pub max_tokens: u32,
     pub concurrency_limit: u32,
     pub ttl_seconds: u64,
+    pub model_repo_canister_id: String,
 }
 
 impl Default for AgentConfig {
@@ -19,6 +20,7 @@ impl Default for AgentConfig {
             max_tokens: 2048,
             concurrency_limit: 4,
             ttl_seconds: 3600,
+            model_repo_canister_id: String::new(),
         }
     }
 }
@@ -77,6 +79,7 @@ pub struct ModelBinding {
     pub manifest_digest: String,
     pub chunks_loaded: u32,
     pub total_chunks: u32,
+    pub version: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
