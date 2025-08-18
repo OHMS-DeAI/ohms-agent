@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 use candid::CandidType;
 use std::collections::HashMap;
 
+pub mod instruction;
+pub use instruction::*;
+
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
 pub struct AgentConfig {
     pub warm_set_target: f32,

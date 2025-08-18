@@ -1,4 +1,5 @@
 use crate::domain::*;
+use crate::domain::instruction::*;
 use std::collections::HashMap;
 use std::cell::RefCell;
 
@@ -7,12 +8,16 @@ pub mod inference;
 pub mod memory;
 pub mod cache;
 pub mod modelrepo;
+pub mod instruction_analyzer;
+pub mod agent_factory;
 
 pub use binding::BindingService;
 pub use inference::InferenceService; 
 pub use memory::MemoryService;
 pub use cache::CacheService;
 pub use modelrepo::ModelRepoClient;
+pub use instruction_analyzer::InstructionAnalyzer;
+pub use agent_factory::{AgentFactory, AutonomousAgent, AgentTask, AgentTaskResult, AgentStatusInfo, AgentSummary};
 use modelrepo::ModelManifest;
 
 thread_local! {
@@ -27,6 +32,7 @@ pub struct AgentState {
     pub memory_entries: HashMap<String, MemoryEntry>,
     pub cache_entries: HashMap<String, CacheEntry>,
     pub metrics: AgentMetrics,
+    pub agents: HashMap<String, AutonomousAgent>,
 }
 
 #[derive(Debug, Default)]

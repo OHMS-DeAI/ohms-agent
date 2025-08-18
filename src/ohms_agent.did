@@ -38,11 +38,206 @@ type AgentHealth = record {
   last_inference_timestamp : nat64;
 };
 
+// Phase 2: Instruction Analysis and Agent Factory Types
+
+type SubscriptionTier = variant { Basic; Pro; Enterprise };
+type ComplexityLevel = variant { Simple; Moderate; Complex; Expert };
+type UrgencyLevel = variant { Low; Normal; High; Critical };
+type ResponseStyle = variant { Concise; Detailed; Conversational; Technical };
+type DetailLevel = variant { Summary; Standard; Comprehensive; Expert };
+type CreativityLevel = variant { Conservative; Balanced; Creative; Experimental };
+type SafetyLevel = variant { Strict; Standard; Flexible; Experimental };
+type CapabilityCategory = variant { 
+  TextGeneration; 
+  CodeGeneration; 
+  DataAnalysis; 
+  ContentCreation; 
+  ProblemSolving; 
+  Coordination; 
+  Communication; 
+  Research; 
+  Planning; 
+  Execution; 
+  Custom : text 
+};
+type CapabilityPriority = variant { Essential; Important; Helpful; Optional };
+type ModelPrecision = variant { FP32; FP16; INT8; INT4; Mixed };
+type ReasoningLevel = variant { Basic; Intermediate; Advanced; Expert };
+type CreativityRequirement = variant { None; Low; Medium; High };
+type AgentType = variant { 
+  GeneralAssistant; 
+  CodeAssistant; 
+  ContentCreator; 
+  DataAnalyst; 
+  ProblemSolver; 
+  Coordinator; 
+  Researcher; 
+  Planner; 
+  Executor; 
+  Custom : text 
+};
+type CommunicationStyle = variant { Direct; Friendly; Professional; Technical; Conversational };
+type DecisionMakingStyle = variant { Conservative; Balanced; Aggressive; Collaborative };
+type RetentionPolicy = variant { Session; Daily; Weekly; Persistent };
+type CoordinationType = variant { None; Sequential; Parallel; Collaborative; Hierarchical };
+type CommunicationProtocol = variant { Direct; Centralized; Broadcast; Hierarchical };
+type TaskDistributionStrategy = variant { RoundRobin; CapabilityBased; LoadBalanced; PriorityBased };
+type TaskPriority = variant { Low; Normal; High; Critical };
+type AgentStatus = variant { 
+  Creating; 
+  Ready; 
+  Active; 
+  Paused; 
+  Completed; 
+  Error : text 
+};
+
+type InstructionContext = record {
+  domain : opt text;
+  complexity : opt ComplexityLevel;
+  urgency : opt UrgencyLevel;
+  collaboration_needed : bool;
+  external_tools_required : vec text;
+};
+
+type AgentPreferences = record {
+  response_style : ResponseStyle;
+  detail_level : DetailLevel;
+  creativity_level : CreativityLevel;
+  safety_level : SafetyLevel;
+  language : text;
+};
+
+type UserInstruction = record {
+  instruction_text : text;
+  user_id : text;
+  subscription_tier : SubscriptionTier;
+  context : opt InstructionContext;
+  preferences : opt AgentPreferences;
+};
+
+type Capability = record {
+  name : text;
+  description : text;
+  category : CapabilityCategory;
+  priority : CapabilityPriority;
+  required_tools : vec text;
+  estimated_tokens : nat32;
+};
+
+type ModelRequirements = record {
+  recommended_models : vec text;
+  minimum_context_length : nat32;
+  preferred_precision : ModelPrecision;
+  specialized_requirements : vec text;
+  reasoning_capability : ReasoningLevel;
+  creativity_requirement : CreativityRequirement;
+};
+
+type AgentPersonality = record {
+  helpfulness : float32;
+  creativity : float32;
+  thoroughness : float32;
+  efficiency : float32;
+  formality : float32;
+  assertiveness : float32;
+};
+
+type MemoryConfiguration = record {
+  short_term_capacity : nat32;
+  long_term_capacity : nat32;
+  retention_policy : RetentionPolicy;
+  sharing_enabled : bool;
+};
+
+type AgentConfiguration = record {
+  agent_type : AgentType;
+  personality : AgentPersonality;
+  behavior_rules : vec text;
+  communication_style : CommunicationStyle;
+  decision_making : DecisionMakingStyle;
+  memory_configuration : MemoryConfiguration;
+  tool_access : vec text;
+  safety_constraints : vec text;
+};
+
+type CoordinationRequirements = record {
+  requires_coordination : bool;
+  coordination_type : CoordinationType;
+  agent_count : nat32;
+  communication_protocol : CommunicationProtocol;
+  task_distribution : TaskDistributionStrategy;
+};
+
+type DurationEstimate = record {
+  min_duration_seconds : nat64;
+  expected_duration_seconds : nat64;
+  max_duration_seconds : nat64;
+  confidence : float32;
+};
+
+type AnalyzedInstruction = record {
+  original_instruction : UserInstruction;
+  extracted_capabilities : vec Capability;
+  model_requirements : ModelRequirements;
+  agent_configuration : AgentConfiguration;
+  coordination_requirements : CoordinationRequirements;
+  estimated_complexity : ComplexityLevel;
+  estimated_duration : DurationEstimate;
+  confidence_score : float32;
+};
+
+type AgentPerformanceMetrics = record {
+  tasks_completed : nat32;
+  total_tokens_used : nat64;
+  average_response_time_ms : float64;
+  success_rate : float32;
+  last_task_timestamp : nat64;
+};
+
+type AgentTask = record {
+  task_id : text;
+  description : text;
+  priority : TaskPriority;
+  deadline : opt nat64;
+  context : vec record { text; text };
+};
+
+type AgentTaskResult = record {
+  task_id : text;
+  success : bool;
+  result : text;
+  tokens_used : nat64;
+  execution_time_ms : nat64;
+  error_message : opt text;
+};
+
+type AgentStatusInfo = record {
+  agent_id : text;
+  status : AgentStatus;
+  performance_metrics : AgentPerformanceMetrics;
+  model_bound : bool;
+  created_at : nat64;
+  last_active : nat64;
+};
+
+type AgentSummary = record {
+  agent_id : text;
+  agent_type : AgentType;
+  status : AgentStatus;
+  created_at : nat64;
+  last_active : nat64;
+};
+
 type Result = variant { Ok; Err : text };
 type Result_1 = variant { Ok : AgentConfig; Err : text };
 type Result_2 = variant { Ok : InferenceResponse; Err : text };
 type Result_3 = variant { Ok : text; Err : text };
 type Result_4 = variant { Ok : nat32; Err : text };
+type Result_5 = variant { Ok : AnalyzedInstruction; Err : text };
+type Result_6 = variant { Ok : AgentTaskResult; Err : text };
+type Result_7 = variant { Ok : AgentStatusInfo; Err : text };
+type Result_8 = variant { Ok : vec AgentSummary; Err : text };
 
 service : {
   bind_model : (text) -> (Result);
@@ -55,4 +250,12 @@ service : {
   infer : (InferenceRequest) -> (Result_2);
   set_config : (AgentConfig) -> (Result);
   repo_canister : () -> (Result_3) query;
+  
+  // Phase 2: Instruction Analysis and Agent Factory
+  analyze_instruction : (UserInstruction) -> (Result_5);
+  create_agent : (UserInstruction) -> (Result_3);
+  create_coordinated_agents : (UserInstruction) -> (Result_8);
+  execute_agent_task : (text, text) -> (Result_6);
+  get_agent_status : (text) -> (Result_7) query;
+  list_user_agents : (text) -> (Result_8) query;
 }

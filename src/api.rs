@@ -1,7 +1,10 @@
 use ic_cdk_macros::*;
 use crate::domain::{AgentConfig, AgentHealth, InferenceRequest, InferenceResponse};
-use crate::services::{BindingService, InferenceService, MemoryService, CacheService, with_state};
+use crate::domain::instruction::*;
+use crate::services::{BindingService, InferenceService, MemoryService, CacheService, InstructionAnalyzer, AgentFactory, with_state, AgentTaskResult, AgentStatusInfo, AgentSummary, AgentTask};
+use crate::services::agent_factory::TaskPriority;
 use crate::infra::{Guards, Metrics};
+use std::collections::HashMap;
 
 #[update]
 async fn bind_model(model_id: String) -> Result<(), String> {
@@ -79,4 +82,67 @@ fn clear_memory() -> Result<(), String> {
     Guards::require_caller_authenticated()?;
     MemoryService::clear_expired();
     Ok(())
+}
+
+// Phase 2: Instruction Analysis and Agent Factory APIs
+
+#[update]
+async fn analyze_instruction(instruction: UserInstruction) -> Result<AnalyzedInstruction, String> {
+    Guards::require_caller_authenticated()?;
+    InstructionAnalyzer::analyze_instruction(instruction)
+}
+
+#[update]
+async fn create_agent(instruction: UserInstruction) -> Result<String, String> {
+    Guards::require_caller_authenticated()?;
+    
+    // Analyze the instruction
+    let analysis = InstructionAnalyzer::analyze_instruction(instruction.clone())?;
+    
+    // Create the agent
+    let user_id = instruction.user_id.clone();
+    let agent = AgentFactory::create_agent(user_id, instruction, analysis).await?;
+    
+    Ok(agent.agent_id)
+}
+
+#[update]
+async fn create_coordinated_agents(instruction: UserInstruction) -> Result<Vec<String>, String> {
+    Guards::require_caller_authenticated()?;
+    
+    // Analyze the instruction
+    let analysis = InstructionAnalyzer::analyze_instruction(instruction.clone())?;
+    
+    // Create coordinated agents
+    let user_id = instruction.user_id.clone();
+    let agents = AgentFactory::create_coordinated_agents(user_id, instruction, analysis).await?;
+    
+    Ok(agents.into_iter().map(|a| a.agent_id).collect())
+}
+
+#[update]
+async fn execute_agent_task(agent_id: String, task_description: String) -> Result<AgentTaskResult, String> {
+    Guards::require_caller_authenticated()?;
+    
+    let task = AgentTask {
+        task_id: format!("task-{}", ic_cdk::api::time()),
+        description: task_description,
+        priority: TaskPriority::Normal,
+        deadline: None,
+        context: HashMap::new(),
+    };
+    
+    AgentFactory::execute_task(&agent_id, task).await
+}
+
+#[query]
+async fn get_agent_status(agent_id: String) -> Result<AgentStatusInfo, String> {
+    Guards::require_caller_authenticated()?;
+    AgentFactory::get_agent_status(&agent_id).await
+}
+
+#[query]
+async fn list_user_agents(user_id: String) -> Result<Vec<AgentSummary>, String> {
+    Guards::require_caller_authenticated()?;
+    AgentFactory::list_user_agents(&user_id).await
 }
