@@ -1,6 +1,7 @@
 use candid::{CandidType, Principal};
 use ic_cdk::api::call::call;
 use serde::{Deserialize, Serialize};
+use crate::services::novaq_validation::{NOVAQValidationService, NOVAQValidationResult, NOVAQModelMeta};
 
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
 pub struct ChunkInfo {
@@ -62,6 +63,31 @@ impl ModelRepoClient {
             .await
             .map_err(|e| format!("xnet get_chunk failed: {:?}", e))?;
         opt_bytes.ok_or_else(|| "chunk not found".to_string())
+    }
+    
+    /// Validate NOVAQ compressed model
+    pub async fn validate_novaq_model(
+        model_id: &str,
+        model_data: &[u8],
+    ) -> Result<NOVAQValidationResult, String> {
+        NOVAQValidationService::validate_novaq_model(model_id, model_data).await
+    }
+    
+    /// Extract NOVAQ model metadata
+    pub async fn extract_novaq_metadata(
+        model_data: &[u8],
+    ) -> Result<NOVAQModelMeta, String> {
+        NOVAQValidationService::extract_novaq_metadata(model_data).await
+    }
+    
+    /// Check if model data is NOVAQ compressed
+    pub fn is_novaq_model(model_data: &[u8]) -> bool {
+        NOVAQValidationService::is_novaq_model(model_data)
+    }
+    
+    /// Get NOVAQ model quality score
+    pub fn get_novaq_quality_score(model_data: &[u8]) -> Result<f64, String> {
+        NOVAQValidationService::get_quality_score(model_data)
     }
 }
 

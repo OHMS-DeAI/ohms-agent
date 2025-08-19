@@ -10,6 +10,7 @@ pub mod cache;
 pub mod modelrepo;
 pub mod instruction_analyzer;
 pub mod agent_factory;
+pub mod novaq_validation;
 
 pub use binding::BindingService;
 pub use inference::InferenceService; 
@@ -18,6 +19,7 @@ pub use cache::CacheService;
 pub use modelrepo::ModelRepoClient;
 pub use instruction_analyzer::InstructionAnalyzer;
 pub use agent_factory::{AgentFactory, AutonomousAgent, AgentTask, AgentTaskResult, AgentStatusInfo, AgentSummary};
+pub use novaq_validation::{NOVAQValidationService, NOVAQValidationResult, NOVAQModelMeta};
 use modelrepo::ModelManifest;
 
 thread_local! {

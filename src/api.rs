@@ -1,7 +1,7 @@
 use ic_cdk_macros::*;
 use crate::domain::{AgentConfig, AgentHealth, InferenceRequest, InferenceResponse};
 use crate::domain::instruction::*;
-use crate::services::{BindingService, InferenceService, MemoryService, CacheService, InstructionAnalyzer, AgentFactory, with_state, AgentTaskResult, AgentStatusInfo, AgentSummary, AgentTask};
+use crate::services::{BindingService, InferenceService, MemoryService, CacheService, InstructionAnalyzer, AgentFactory, with_state, AgentTaskResult, AgentStatusInfo, AgentSummary, AgentTask, ModelRepoClient, NOVAQValidationResult, NOVAQModelMeta};
 use crate::services::agent_factory::TaskPriority;
 use crate::infra::{Guards, Metrics};
 use std::collections::HashMap;
@@ -220,4 +220,28 @@ async fn get_agent_status(agent_id: String) -> Result<AgentStatusInfo, String> {
 async fn list_user_agents(user_id: String) -> Result<Vec<AgentSummary>, String> {
     Guards::require_caller_authenticated()?;
     AgentFactory::list_user_agents(&user_id).await
+}
+
+// NOVAQ Validation APIs
+
+#[update]
+async fn validate_novaq_model(model_id: String, model_data: Vec<u8>) -> Result<NOVAQValidationResult, String> {
+    Guards::require_caller_authenticated()?;
+    ModelRepoClient::validate_novaq_model(&model_id, &model_data).await
+}
+
+#[query]
+async fn extract_novaq_metadata(model_data: Vec<u8>) -> Result<NOVAQModelMeta, String> {
+    Guards::require_caller_authenticated()?;
+    ModelRepoClient::extract_novaq_metadata(&model_data).await
+}
+
+#[query]
+fn is_novaq_model(model_data: Vec<u8>) -> bool {
+    ModelRepoClient::is_novaq_model(&model_data)
+}
+
+#[query]
+fn get_novaq_quality_score(model_data: Vec<u8>) -> Result<f64, String> {
+    ModelRepoClient::get_novaq_quality_score(&model_data)
 }

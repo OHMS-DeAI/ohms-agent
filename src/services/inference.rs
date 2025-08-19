@@ -1,5 +1,5 @@
 use crate::domain::*;
-use crate::services::{with_state, with_state_mut, CacheService};
+use crate::services::{with_state, with_state_mut, CacheService, ModelRepoClient};
 use ic_cdk::api::time;
 use sha2::{Sha256, Digest};
 
@@ -14,6 +14,9 @@ impl InferenceService {
         if !model_bound {
             return Err("No model bound to agent".to_string());
         }
+        
+        // Check if bound model is NOVAQ compressed and validate quality
+        let model_quality = Self::validate_bound_model_quality().await?;
         
         // Deterministic token stream derived from real loaded chunk bytes + prompt
         let tokens = Self::generate_tokens_from_artifacts(&request.prompt, &request.decode_params)?;
@@ -84,4 +87,45 @@ impl InferenceService {
     }
 
     // estimate_cache_activity removed (logic inlined to avoid nested RefCell borrows)
+    
+    /// Validate quality of bound model (supports NOVAQ compressed models)
+    async fn validate_bound_model_quality() -> Result<f64, String> {
+        let binding = with_state(|state| state.binding.clone());
+        let binding = binding.ok_or("No model bound")?;
+        
+        // Check if we have cached model data
+        let model_data = with_state(|state| {
+            // Look for model chunks in cache
+            state.cache_entries.values()
+                .filter(|entry| entry.layer_id.starts_with(&binding.model_id))
+                .map(|entry| entry.data.clone())
+                .collect::<Vec<_>>()
+        });
+        
+        if model_data.is_empty() {
+            // No cached data, assume standard quality
+            return Ok(1.0);
+        }
+        
+        // Check if any chunks are NOVAQ compressed
+        for chunk_data in &model_data {
+            if ModelRepoClient::is_novaq_model(chunk_data) {
+                // Validate NOVAQ model quality
+                match ModelRepoClient::get_novaq_quality_score(chunk_data) {
+                    Ok(quality_score) => {
+                        // Log quality score for monitoring
+                        ic_cdk::println!("NOVAQ model quality score: {:.3}", quality_score);
+                        return Ok(quality_score);
+                    }
+                    Err(e) => {
+                        ic_cdk::println!("NOVAQ validation error: {}", e);
+                        return Err(format!("NOVAQ validation failed: {}", e));
+                    }
+                }
+            }
+        }
+        
+        // No NOVAQ models found, return standard quality
+        Ok(1.0)
+    }
 }
