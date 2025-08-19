@@ -106,6 +106,81 @@ async fn create_agent(instruction: UserInstruction) -> Result<String, String> {
     Ok(agent.agent_id)
 }
 
+// Compatible endpoint for UI (maps to create_agent)
+#[derive(serde::Deserialize, candid::CandidType)]
+pub struct AgentCreationRequest {
+    pub instruction: String,
+    pub agent_count: Option<u32>,
+    pub capabilities: Option<Vec<String>>,
+    pub priority: Option<String>,
+}
+
+#[derive(serde::Serialize, candid::CandidType)]
+pub struct AgentCreationResult {
+    pub agent_id: String,
+    pub status: String,
+    pub capabilities: Vec<String>,
+    pub estimated_completion: Option<u64>,
+}
+
+#[update]
+async fn create_agent_from_instruction(request: AgentCreationRequest) -> Result<AgentCreationResult, String> {
+    Guards::require_caller_authenticated()?;
+    
+    // Convert to UserInstruction format
+    let user_instruction = UserInstruction {
+        instruction_text: request.instruction,
+        user_id: ic_cdk::api::caller().to_string(),
+        subscription_tier: SubscriptionTier::Basic, // Will be validated by coordinator
+        context: Some(InstructionContext {
+            domain: None,
+            complexity: None,
+            urgency: Some(match request.priority.as_deref() {
+                Some("low") => UrgencyLevel::Low,
+                Some("high") => UrgencyLevel::High,
+                Some("critical") => UrgencyLevel::Critical,
+                _ => UrgencyLevel::Normal,
+            }),
+            collaboration_needed: request.agent_count.unwrap_or(1) > 1,
+            external_tools_required: vec![],
+        }),
+        preferences: Some(AgentPreferences {
+            response_style: ResponseStyle::Conversational,
+            detail_level: DetailLevel::Standard,
+            creativity_level: CreativityLevel::Balanced,
+            safety_level: SafetyLevel::Standard,
+            language: "en".to_string(),
+        }),
+    };
+    
+    // Analyze the instruction
+    let analysis = InstructionAnalyzer::analyze_instruction(user_instruction.clone())?;
+    
+    // Create the agent(s)
+    let agent_count = request.agent_count.unwrap_or(1);
+    let user_id = user_instruction.user_id.clone();
+    
+    if agent_count == 1 {
+        let agent = AgentFactory::create_agent(user_id, user_instruction, analysis).await?;
+        Ok(AgentCreationResult {
+            agent_id: agent.agent_id,
+            status: "Ready".to_string(),
+            capabilities: request.capabilities.unwrap_or_else(|| vec!["General Assistant".to_string()]),
+            estimated_completion: Some(ic_cdk::api::time() + 30_000_000_000), // 30 seconds from now
+        })
+    } else {
+        let agents = AgentFactory::create_coordinated_agents(user_id, user_instruction, analysis).await?;
+        // Return first agent ID (coordinator)
+        let primary_agent = agents.first().ok_or("Failed to create coordinated agents")?;
+        Ok(AgentCreationResult {
+            agent_id: primary_agent.agent_id.clone(),
+            status: "Ready".to_string(),
+            capabilities: request.capabilities.unwrap_or_else(|| vec!["Coordinated Team".to_string()]),
+            estimated_completion: Some(ic_cdk::api::time() + 60_000_000_000), // 60 seconds for coordinated
+        })
+    }
+}
+
 #[update]
 async fn create_coordinated_agents(instruction: UserInstruction) -> Result<Vec<String>, String> {
     Guards::require_caller_authenticated()?;

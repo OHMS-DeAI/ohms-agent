@@ -239,6 +239,23 @@ type Result_6 = variant { Ok : AgentTaskResult; Err : text };
 type Result_7 = variant { Ok : AgentStatusInfo; Err : text };
 type Result_8 = variant { Ok : vec AgentSummary; Err : text };
 
+// UI-compatible agent creation types
+type AgentCreationRequest = record {
+  instruction : text;
+  agent_count : opt nat32;
+  capabilities : opt vec text;
+  priority : opt text;
+};
+
+type AgentCreationResult = record {
+  agent_id : text;
+  status : text;
+  capabilities : vec text;
+  estimated_completion : opt nat64;
+};
+
+type Result_AgentCreation = variant { Ok : AgentCreationResult; Err : text };
+
 service : {
   bind_model : (text) -> (Result);
   prefetch_next : (nat32) -> (Result_4);
@@ -255,6 +272,7 @@ service : {
   analyze_instruction : (UserInstruction) -> (Result_5);
   create_agent : (UserInstruction) -> (Result_3);
   create_coordinated_agents : (UserInstruction) -> (Result_8);
+  create_agent_from_instruction : (AgentCreationRequest) -> (Result_AgentCreation);
   execute_agent_task : (text, text) -> (Result_6);
   get_agent_status : (text) -> (Result_7) query;
   list_user_agents : (text) -> (Result_8) query;

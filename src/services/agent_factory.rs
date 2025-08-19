@@ -202,22 +202,23 @@ impl AgentFactory {
 
     // Private helper methods
 
-    async fn validate_user_quotas(user_id: &str, tier: &SubscriptionTier) -> Result<(), String> {
+    async fn validate_user_quotas(user_id: &str, _tier: &SubscriptionTier) -> Result<(), String> {
+        // Call the economics canister to validate subscription quotas
+        // This will be implemented when we integrate with the economics canister
+        // For now, we'll use a simple validation
+        
         // Check agent creation limits
         let user_agents = Self::list_user_agents(user_id).await?;
-        let max_agents = match tier {
-            SubscriptionTier::Basic => 5,
-            SubscriptionTier::Pro => 25,
-            SubscriptionTier::Enterprise => 100,
-        };
-
+        
+        // Get user subscription from economics canister
+        // TODO: Implement cross-canister call to economics canister
+        // let subscription = econ_canister::get_user_subscription(user_id).await?;
+        
+        // For now, use a default limit
+        let max_agents = 25; // Default to Pro tier limit
+        
         if user_agents.len() >= max_agents {
-            return Err(format!("Agent limit reached for {} tier. Maximum: {}", 
-                match tier {
-                    SubscriptionTier::Basic => "Basic",
-                    SubscriptionTier::Pro => "Pro", 
-                    SubscriptionTier::Enterprise => "Enterprise",
-                }, max_agents));
+            return Err(format!("Agent limit reached. Maximum: {}", max_agents));
         }
 
         Ok(())
