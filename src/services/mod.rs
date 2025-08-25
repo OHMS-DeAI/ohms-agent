@@ -11,15 +11,19 @@ pub mod modelrepo;
 pub mod instruction_analyzer;
 pub mod agent_factory;
 pub mod novaq_validation;
+pub mod dfinity_llm;
 
 pub use binding::BindingService;
-pub use inference::InferenceService; 
+pub use inference::InferenceService;
 pub use memory::MemoryService;
 pub use cache::CacheService;
 pub use modelrepo::ModelRepoClient;
 pub use instruction_analyzer::InstructionAnalyzer;
 pub use agent_factory::{AgentFactory, AutonomousAgent, AgentTask, AgentTaskResult, AgentStatusInfo, AgentSummary};
 pub use novaq_validation::{NOVAQValidationService, NOVAQValidationResult, NOVAQModelMeta};
+// Note: Currently supports only Llama 3.1 8B
+// Architecture is designed to easily add new models when they become available
+pub use dfinity_llm::{DfinityLlmService, QuantizedModel, ChatMessage, MessageRole, ConversationSession, TokenUsage, UserQuota, LlmError};
 use modelrepo::ModelManifest;
 
 thread_local! {
@@ -35,6 +39,7 @@ pub struct AgentState {
     pub cache_entries: HashMap<String, CacheEntry>,
     pub metrics: AgentMetrics,
     pub agents: HashMap<String, AutonomousAgent>,
+    pub llm_service: DfinityLlmService,
 }
 
 #[derive(Debug, Default)]

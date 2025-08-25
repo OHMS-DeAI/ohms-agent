@@ -24,4 +24,6 @@ getrandom = { version = "0.2", features = ["custom"] }
 hex = "0.4"
 ic-stable-structures = { workspace = true }
 
+# DFINITY LLM integration
+ic-llm = "0.3"
 # OHMS dependencies (none required in agent for runtime)
