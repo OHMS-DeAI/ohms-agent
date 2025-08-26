@@ -1,12 +1,12 @@
 # OHMS Agent Factory - Autonomous Agent Creation Engine
 
-[![OHMS 2.0](https://img.shields.io/badge/OHMS-2.0-blue.svg)](https://github.com/ohms-2-0)
+[![OHMS 2.0](https://img.shields.io/badge/OHMS-2.0-blue.svg)](https://github.com/OHMS-DeAI)
 [![Internet Computer](https://img.shields.io/badge/Internet_Computer-ICP-blue.svg)](https://internetcomputer.org/)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://rust-lang.org/)
 
-**Canister ID:** `gavyi-uyaaa-aaaaa-qbu7q-cai`
-**Network:** Internet Computer Mainnet
-**Direct URL:** https://gavyi-uyaaa-aaaaa-qbu7q-cai.icp0.io/
+**Canister ID:** `gavyi-uyaaa-aaaaa-qbu7q-cai`\
+**Network:** Internet Computer Mainnet\
+**Direct URL:** https://gavyi-uyaaa-aaaaa-qbu7q-cai.icp0.io/\
 **Candid UI:** https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=gavyi-uyaaa-aaaaa-qbu7q-cai
 
 The OHMS Agent Factory is the revolutionary core of the OHMS 2.0 platform, transforming natural language instructions into fully autonomous AI agents that operate entirely on-chain. This canister implements the instruction-to-agent conversion pipeline, enabling users to create specialized autonomous agents from simple text descriptions.
@@ -472,7 +472,7 @@ done
 
 ### Community
 - [OHMS Discord](https://discord.gg/ohms)
-- [GitHub Repository](https://github.com/ohms-2-0/ohms-agent)
+- [GitHub Repository](https://github.com/OHMS-DeAI/ohms-agent)
 - [ICP Community Forum](https://forum.dfinity.org/)
 
 ---
