@@ -25,5 +25,5 @@ hex = "0.4"
 ic-stable-structures = { workspace = true }
 
 # DFINITY LLM integration
-ic-llm = "0.3"
+ic-llm = "1.1.0"
 # OHMS dependencies (none required in agent for runtime)

@@ -327,7 +327,7 @@ impl AgentFactory {
     fn create_specialized_analysis(
         original: &AnalyzedInstruction,
         capability: &Capability,
-        index: usize,
+        _index: usize,
         total: u32,
     ) -> AnalyzedInstruction {
         let mut specialized = original.clone();
@@ -339,7 +339,7 @@ impl AgentFactory {
     }
 
     // Task execution methods for different agent types
-    async fn execute_code_task(agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
+    async fn execute_code_task(_agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
         // Use the agent's model binding to generate code
         let prompt = format!(
             "You are a specialized code assistant. {}",
@@ -366,7 +366,7 @@ impl AgentFactory {
         })
     }
 
-    async fn execute_data_task(agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
+    async fn execute_data_task(_agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
         let prompt = format!(
             "You are a data analyst. Analyze and provide insights for: {}",
             task.description
@@ -391,7 +391,7 @@ impl AgentFactory {
         })
     }
 
-    async fn execute_content_task(agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
+    async fn execute_content_task(_agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
         let prompt = format!(
             "You are a content creator. Create engaging content for: {}",
             task.description
@@ -416,7 +416,7 @@ impl AgentFactory {
         })
     }
 
-    async fn execute_problem_task(agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
+    async fn execute_problem_task(_agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
         let prompt = format!(
             "You are a problem solver. Analyze and solve: {}",
             task.description
@@ -441,7 +441,7 @@ impl AgentFactory {
         })
     }
 
-    async fn execute_research_task(agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
+    async fn execute_research_task(_agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
         let prompt = format!(
             "You are a researcher. Research and provide information about: {}",
             task.description
@@ -466,7 +466,7 @@ impl AgentFactory {
         })
     }
 
-    async fn execute_planning_task(agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
+    async fn execute_planning_task(_agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
         let prompt = format!(
             "You are a planner. Create a plan for: {}",
             task.description
@@ -491,7 +491,7 @@ impl AgentFactory {
         })
     }
 
-    async fn execute_general_task(agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
+    async fn execute_general_task(_agent: &AutonomousAgent, task: &AgentTask) -> Result<AgentTaskResult, String> {
         let prompt = format!(
             "You are a helpful assistant. Help with: {}",
             task.description

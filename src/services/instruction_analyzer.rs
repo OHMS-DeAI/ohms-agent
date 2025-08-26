@@ -1,5 +1,4 @@
 use crate::domain::instruction::*;
-use std::collections::HashMap;
 
 /// Service for analyzing user instructions and generating agent configurations
 pub struct InstructionAnalyzer;
@@ -273,7 +272,7 @@ impl InstructionAnalyzer {
     }
 
     /// Estimate task duration
-    fn estimate_duration(instruction: &UserInstruction, capabilities: &[Capability]) -> DurationEstimate {
+    fn estimate_duration(_instruction: &UserInstruction, capabilities: &[Capability]) -> DurationEstimate {
         let base_tokens: u32 = capabilities.iter().map(|c| c.estimated_tokens).sum();
         let base_seconds = (base_tokens as f64 / 100.0).max(30.0) as u64; // Rough estimate
 
@@ -377,7 +376,7 @@ impl InstructionAnalyzer {
         personality
     }
 
-    fn generate_behavior_rules(instruction: &UserInstruction, capabilities: &[Capability]) -> Vec<String> {
+    fn generate_behavior_rules(_instruction: &UserInstruction, capabilities: &[Capability]) -> Vec<String> {
         let mut rules = vec![
             "Always prioritize user safety and ethical considerations".to_string(),
             "Provide accurate and helpful responses".to_string(),

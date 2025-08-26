@@ -1,12 +1,10 @@
-use crate::domain::*;
-use crate::services::binding;
 use candid::{CandidType, Deserialize, Principal};
 use ic_cdk::api::time;
-use ic_llm::models::{Model, CreateChat, ChatMessage as LlmChatMessage, MessageRole as LlmMessageRole};
+use ic_llm::{Model, ChatMessage as LlmChatMessage};
 use serde::Serialize;
 use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 // DFINITY LLM Model Types - mapped to actual ic-llm models
 // Currently only Llama 3.1 8B is supported per DFINITY repository documentation
@@ -31,16 +29,12 @@ impl QuantizedModel {
     pub fn display_name(&self) -> &str {
         match self {
             QuantizedModel::Llama3_1_8B => "Llama 3.1 8B",
-            QuantizedModel::Qwen3_32B => "Qwen 3 32B",
-            QuantizedModel::Llama4Scout => "Llama 4 Scout",
         }
     }
 
     pub fn description(&self) -> &str {
         match self {
             QuantizedModel::Llama3_1_8B => "Fast and efficient general-purpose AI for content generation and code assistance",
-            QuantizedModel::Qwen3_32B => "Advanced reasoning model for complex problem-solving and detailed analysis",
-            QuantizedModel::Llama4Scout => "Specialized model for research, exploration, and creative discovery",
         }
     }
 
@@ -51,18 +45,6 @@ impl QuantizedModel {
                 "Code Assistance",
                 "General Chat",
                 "Fast Response Times"
-            ],
-            QuantizedModel::Qwen3_32B => vec![
-                "Complex Reasoning",
-                "Technical Analysis",
-                "Research Assistance",
-                "Detailed Explanations"
-            ],
-            QuantizedModel::Llama4Scout => vec![
-                "Data Exploration",
-                "Creative Tasks",
-                "Research Discovery",
-                "Innovative Solutions"
             ],
         }
     }
@@ -84,22 +66,16 @@ pub enum MessageRole {
     System,
 }
 
-impl From<MessageRole> for LlmMessageRole {
-    fn from(role: MessageRole) -> Self {
-        match role {
-            MessageRole::User => LlmMessageRole::User,
-            MessageRole::Assistant => LlmMessageRole::Assistant,
-            MessageRole::System => LlmMessageRole::System,
-        }
-    }
-}
-
-impl From<LlmMessageRole> for MessageRole {
-    fn from(role: LlmMessageRole) -> Self {
-        match role {
-            LlmMessageRole::User => MessageRole::User,
-            LlmMessageRole::Assistant => MessageRole::Assistant,
-            LlmMessageRole::System => MessageRole::System,
+// Convert our MessageRole to ic_llm::ChatMessage
+impl MessageRole {
+    pub fn to_llm_chat_message(&self, content: String) -> LlmChatMessage {
+        match self {
+            MessageRole::User => LlmChatMessage::User { content },
+            MessageRole::Assistant => LlmChatMessage::Assistant(ic_llm::AssistantMessage {
+                content: Some(content),
+                tool_calls: Vec::new(),
+            }),
+            MessageRole::System => LlmChatMessage::System { content },
         }
     }
 }
@@ -150,11 +126,13 @@ pub enum LlmError {
 }
 
 // Main DFINITY LLM Service
+#[derive(Debug)]
 pub struct DfinityLlmService {
-    conversations: Arc<RwLock<HashMap<String, ConversationSession>>>,
-    user_quotas: Arc<RwLock<HashMap<Principal, UserQuota>>>,
+    conversations: Rc<RefCell<HashMap<String, ConversationSession>>>,
+    user_quotas: Rc<RefCell<HashMap<Principal, UserQuota>>>,
     active_models: Vec<QuantizedModel>,
     // DFINITY LLM canister configuration
+    #[allow(dead_code)]
     llm_canister_principal: Principal,
 }
 
@@ -165,21 +143,21 @@ impl DfinityLlmService {
             .expect("Invalid LLM canister principal");
 
         Self {
-            conversations: Arc::new(RwLock::new(HashMap::new())),
-            user_quotas: Arc::new(RwLock::new(HashMap::new())),
+            conversations: Rc::new(RefCell::new(HashMap::new())),
+            user_quotas: Rc::new(RefCell::new(HashMap::new())),
             active_models: vec![
                 QuantizedModel::Llama3_1_8B,
-                            // Note: Currently only Llama 3.1 8B is supported
-            // Additional models will be added based on user feedback and demand
-            // The architecture is designed to easily add new models when they become available.
+                // Note: Currently only Llama 3.1 8B is supported
+                // Additional models will be added based on user feedback and demand
+                // The architecture is designed to easily add new models when they become available.
             ],
             llm_canister_principal,
         }
     }
 
     // Initialize user quota if not exists
-    pub async fn initialize_user_quota(&self, user_principal: Principal) -> Result<(), LlmError> {
-        let mut quotas = self.user_quotas.write().await;
+    pub fn initialize_user_quota(&self, user_principal: Principal) -> Result<(), LlmError> {
+        let mut quotas = self.user_quotas.borrow_mut();
 
         if !quotas.contains_key(&user_principal) {
             let quota = UserQuota {
@@ -198,8 +176,8 @@ impl DfinityLlmService {
     }
 
     // Check if user is within rate limits
-    pub async fn check_rate_limit(&self, user_principal: Principal, estimated_tokens: u64) -> Result<(), LlmError> {
-        let quotas = self.user_quotas.read().await;
+    pub fn check_rate_limit(&self, user_principal: Principal, estimated_tokens: u64) -> Result<(), LlmError> {
+        let quotas = self.user_quotas.borrow();
         let quota = quotas.get(&user_principal)
             .ok_or(LlmError::AuthenticationFailed)?;
 
@@ -219,8 +197,8 @@ impl DfinityLlmService {
     }
 
     // Create new conversation session
-    pub async fn create_conversation(&self, user_principal: Principal, model: QuantizedModel) -> Result<String, LlmError> {
-        self.initialize_user_quota(user_principal).await?;
+    pub fn create_conversation(&self, user_principal: Principal, model: QuantizedModel) -> Result<String, LlmError> {
+        self.initialize_user_quota(user_principal)?;
 
         let session_id = format!("conv_{}_{}", user_principal.to_string(), time());
         let session = ConversationSession {
@@ -238,7 +216,7 @@ impl DfinityLlmService {
             },
         };
 
-        let mut conversations = self.conversations.write().await;
+        let mut conversations = self.conversations.borrow_mut();
         conversations.insert(session_id.clone(), session);
 
         Ok(session_id)
@@ -252,7 +230,7 @@ impl DfinityLlmService {
         user_principal: Principal,
     ) -> Result<ChatMessage, LlmError> {
         // Validate session exists and belongs to user
-        let mut conversations = self.conversations.write().await;
+        let mut conversations = self.conversations.borrow_mut();
         let session = conversations.get_mut(session_id)
             .ok_or(LlmError::InvalidRequest {
                 message: "Conversation session not found".to_string(),
@@ -264,7 +242,7 @@ impl DfinityLlmService {
 
         // Check rate limits
         let estimated_tokens = (user_message.len() / 4) as u64; // Rough token estimation
-        self.check_rate_limit(user_principal, estimated_tokens).await?;
+        self.check_rate_limit(user_principal, estimated_tokens)?;
 
         // Add user message to conversation
         let user_chat_message = ChatMessage {
@@ -277,7 +255,7 @@ impl DfinityLlmService {
         session.last_activity = time();
 
         // Call DFINITY LLM canister (abstracted implementation)
-        let response = self.call_llm_canister(&session.model, &user_message).await?;
+        let response = self.call_llm_canister_async(&session.model, &user_message).await?;
 
         // Create assistant response message
         let assistant_message = ChatMessage {
@@ -298,7 +276,7 @@ impl DfinityLlmService {
         );
 
         // Update user quota
-        let mut quotas = self.user_quotas.write().await;
+        let mut quotas = self.user_quotas.borrow_mut();
         if let Some(quota) = quotas.get_mut(&user_principal) {
             quota.current_daily_usage += estimated_tokens + response_tokens;
             quota.current_monthly_usage += estimated_tokens + response_tokens;
@@ -311,45 +289,34 @@ impl DfinityLlmService {
     }
 
     // Real DFINITY LLM canister call using ic-llm crate
-    async fn call_llm_canister(&self, model: &QuantizedModel, message: &str) -> Result<String, LlmError> {
+    async fn call_llm_canister_async(&self, model: &QuantizedModel, message: &str) -> Result<String, LlmError> {
         // Convert our message to DFINITY LLM format
         let llm_messages = vec![
-            LlmChatMessage {
-                role: LlmMessageRole::User,
+            LlmChatMessage::User {
                 content: message.to_string(),
             }
         ];
 
-        // Create chat request using the ic-llm crate
-        let chat_request = CreateChat {
-            model: model.to_llm_model(),
-            messages: llm_messages,
-            max_tokens: Some(1000), // Based on repository documentation limits
-        };
-
-        // Call the DFINITY LLM canister
-        // Note: This would require setting up the proper canister interface
-        // For now, we'll use a simulated response until the canister interface is fully set up
+        // Call the DFINITY LLM canister using proper ic-llm API
         match model {
             QuantizedModel::Llama3_1_8B => {
-                // In production, this would be:
-                // let response = ic_llm::create_chat(self.llm_canister_principal, chat_request).await?;
-                // Ok(response.message.content)
-
-                // For now, simulate the response with proper structure
-                Ok(format!("Llama 3.1 8B Response: I've processed your message about '{}'. This is a fast, general-purpose AI response using advanced AI infrastructure.", message.chars().take(50).collect::<String>()))
+                let response = ic_llm::chat(model.to_llm_model())
+                    .with_messages(llm_messages)
+                    .send()
+                    .await;
+                Ok(response.message.content.unwrap_or_default())
             },
         }
     }
 
     // Calculate estimated cost (currently free for beta users)
-    fn calculate_cost(&self, total_tokens: u64, model: &QuantizedModel) -> f64 {
+    fn calculate_cost(&self, _total_tokens: u64, model: &QuantizedModel) -> f64 {
         // Currently free for beta users
         // Future pricing will be based on usage tiers and model capabilities
         match model {
             QuantizedModel::Llama3_1_8B => 0.0, // Currently free
             // Future pricing model:
-            // QuantizedModel::Llama3_1_8B => (total_tokens as f64 / 1000.0) * 0.0001, // $0.10 per 1K tokens
+            // QuantizedModel::Llama3_1_8B => (_total_tokens as f64 / 1000.0) * 0.0001, // $0.10 per 1K tokens
         }
     }
 
@@ -372,8 +339,8 @@ impl DfinityLlmService {
     }
 
     // Get conversation history
-    pub async fn get_conversation(&self, session_id: &str, user_principal: Principal) -> Result<ConversationSession, LlmError> {
-        let conversations = self.conversations.read().await;
+    pub fn get_conversation(&self, session_id: &str, user_principal: Principal) -> Result<ConversationSession, LlmError> {
+        let conversations = self.conversations.borrow();
         let session = conversations.get(session_id)
             .ok_or(LlmError::InvalidRequest {
                 message: "Conversation not found".to_string(),
@@ -387,8 +354,8 @@ impl DfinityLlmService {
     }
 
     // List user conversations
-    pub async fn list_conversations(&self, user_principal: Principal) -> Vec<ConversationSession> {
-        let conversations = self.conversations.read().await;
+    pub fn list_conversations(&self, user_principal: Principal) -> Vec<ConversationSession> {
+        let conversations = self.conversations.borrow();
         conversations.values()
             .filter(|session| session.user_principal == user_principal)
             .cloned()
@@ -396,8 +363,8 @@ impl DfinityLlmService {
     }
 
     // Delete conversation
-    pub async fn delete_conversation(&self, session_id: &str, user_principal: Principal) -> Result<(), LlmError> {
-        let mut conversations = self.conversations.write().await;
+    pub fn delete_conversation(&self, session_id: &str, user_principal: Principal) -> Result<(), LlmError> {
+        let mut conversations = self.conversations.borrow_mut();
         let session = conversations.get(session_id)
             .ok_or(LlmError::InvalidRequest {
                 message: "Conversation not found".to_string(),
@@ -412,8 +379,8 @@ impl DfinityLlmService {
     }
 
     // Switch model in existing conversation
-    pub async fn switch_model(&self, session_id: &str, new_model: QuantizedModel, user_principal: Principal) -> Result<(), LlmError> {
-        let mut conversations = self.conversations.write().await;
+    pub fn switch_model(&self, session_id: &str, new_model: QuantizedModel, user_principal: Principal) -> Result<(), LlmError> {
+        let mut conversations = self.conversations.borrow_mut();
         let session = conversations.get_mut(session_id)
             .ok_or(LlmError::InvalidRequest {
                 message: "Conversation not found".to_string(),

@@ -1,5 +1,4 @@
 use crate::domain::*;
-use crate::domain::instruction::*;
 use std::collections::HashMap;
 use std::cell::RefCell;
 
@@ -27,10 +26,10 @@ pub use dfinity_llm::{DfinityLlmService, QuantizedModel, ChatMessage, MessageRol
 use modelrepo::ModelManifest;
 
 thread_local! {
-    static STATE: RefCell<AgentState> = RefCell::new(AgentState::default());
+    static STATE: RefCell<Option<AgentState>> = RefCell::new(None);
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct AgentState {
     pub config: AgentConfig,
     pub binding: Option<ModelBinding>,
@@ -39,7 +38,22 @@ pub struct AgentState {
     pub cache_entries: HashMap<String, CacheEntry>,
     pub metrics: AgentMetrics,
     pub agents: HashMap<String, AutonomousAgent>,
-    pub llm_service: DfinityLlmService,
+    pub llm_service: Option<DfinityLlmService>, // Lazy initialization
+}
+
+impl Default for AgentState {
+    fn default() -> Self {
+        Self {
+            config: AgentConfig::default(),
+            binding: None,
+            manifest: None,
+            memory_entries: HashMap::new(),
+            cache_entries: HashMap::new(),
+            metrics: AgentMetrics::default(),
+            agents: HashMap::new(),
+            llm_service: None, // Don't initialize LLM service by default
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -52,9 +66,21 @@ pub struct AgentMetrics {
 }
 
 pub fn with_state<R>(f: impl FnOnce(&AgentState) -> R) -> R {
-    STATE.with(|s| f(&*s.borrow()))
+    STATE.with(|s| {
+        let mut state_ref = s.borrow_mut();
+        if state_ref.is_none() {
+            *state_ref = Some(AgentState::default());
+        }
+        f(state_ref.as_ref().unwrap())
+    })
 }
 
 pub fn with_state_mut<R>(f: impl FnOnce(&mut AgentState) -> R) -> R {
-    STATE.with(|s| f(&mut *s.borrow_mut()))
+    STATE.with(|s| {
+        let mut state_ref = s.borrow_mut();
+        if state_ref.is_none() {
+            *state_ref = Some(AgentState::default());
+        }
+        f(state_ref.as_mut().unwrap())
+    })
 }

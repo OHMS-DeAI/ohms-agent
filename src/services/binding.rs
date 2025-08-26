@@ -104,6 +104,7 @@ impl BindingService {
         })
     }
     
+    #[allow(dead_code)]
     fn compute_manifest_digest(model_id: &str) -> Result<String, String> {
         let mut hasher = Sha256::new();
         hasher.update(model_id.as_bytes());

@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use candid::CandidType;
-use std::collections::HashMap;
 
 pub mod instruction;
 pub use instruction::*;

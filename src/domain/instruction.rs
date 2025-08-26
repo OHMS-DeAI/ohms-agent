@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use candid::CandidType;
-use std::collections::HashMap;
 
 /// User instruction for creating autonomous agents
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
