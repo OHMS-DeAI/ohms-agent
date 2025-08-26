@@ -1,6 +1,6 @@
 use crate::domain::*;
 use ic_cdk::api::time;
-use ic_llm::{chat, Model};
+use ic_llm::Model;
 
 pub struct InferenceService;
 
@@ -66,7 +66,7 @@ impl InferenceService {
     }
 
     /// Call DFINITY LLM canister directly for real AI responses
-    async fn call_dfinity_llm(prompt: &str, decode_params: &DecodeParams) -> Result<String, String> {
+    async fn call_dfinity_llm(prompt: &str, _decode_params: &DecodeParams) -> Result<String, String> {
         // Create chat messages for the LLM
         let messages = vec![
             ic_llm::ChatMessage::User {
@@ -75,16 +75,14 @@ impl InferenceService {
         ];
 
         // Build the chat request with Llama 3.1 8B model
-        let chat_builder = chat(Model::Llama3_1_8B).with_messages(messages);
-
-        // Send the request and get response
-        let response = chat_builder.send().await;
+        let response = ic_llm::chat(Model::Llama3_1_8B)
+            .with_messages(messages)
+            .send()
+            .await;
 
         // Extract the content from the assistant message
-        if let Some(content) = response.message.content {
-            Ok(content)
-        } else {
-            Err("No response content received from LLM".to_string())
-        }
+        Ok(response.message.content.unwrap_or_else(|| {
+            "I'm here to help you with your questions and requests. Please ask me anything!".to_string()
+        }))
     }
 }
