@@ -213,6 +213,19 @@ dfx canister --network ic call gavyi-uyaaa-aaaaa-qbu7q-cai update_usage '(
 ## 🔄 Agent Lifecycle Management
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#e5e5e5",
+    "primaryTextColor": "#000000",
+    "fontFamily": "Arial",
+    "fontSize": "13px",
+    "fontWeight": "bold",
+    "lineColor": "#dc3545",
+    "lineWidth": "3px"
+  }
+}}%%
+
 stateDiagram-v2
     [*] --> InstructionReceived
     InstructionReceived --> Analyzing: Parse & Validate
@@ -234,6 +247,7 @@ stateDiagram-v2
 
     ErrorHandling --> Termination: Unrecoverable
     Termination --> [*]: Agent Removed
+
 ```
 
 ## 🔐 Security & Access Control
